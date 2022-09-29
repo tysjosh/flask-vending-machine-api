@@ -1,0 +1,29 @@
+Create a Product
+---
+tags:
+  - Product
+parameters:
+  - name: body
+    description: The body should contain the data for creating a product
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - "productName"
+      properties:
+        email:
+          type: "productName"
+          example: "productA"
+        username:
+          type: "cost"
+          example: 10
+        password:
+          type: "amountAvailable"
+          example: 22
+responses:
+  201:
+    description: When a product is successfully created
+
+  400:
+    description: Fails to create a product due to bad request data
