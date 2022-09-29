@@ -9,7 +9,7 @@ from flask_jwt_extended import jwt_required, create_access_token, create_refresh
     get_jwt_identity, verify_jwt_in_request, get_jwt, unset_jwt_cookies
 from flasgger import swag_from
 from src.models import Product, User, Role, TokenBlocklist, db
-from datetime import datetime, timezone
+from datetime import datetime
 from src.extensions import jwt
 
 
