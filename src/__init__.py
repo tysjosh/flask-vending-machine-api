@@ -19,6 +19,8 @@ def create_app(test_config=None):
             SQLALCHEMY_TRACK_MODIFICATIONS=False,
             JWT_SECRET_KEY=os.environ.get("JWT_SECRECT_KEY"),
             JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=60),
+            JWT_BLACKLIST_ENABLED = True,
+            JWT_BLACKLIST_TOKEN_CHECKS = ['access', 'refresh'],
             SWAGGER={
                 'title': "Vending Machine API",
                 'uiversion': 3

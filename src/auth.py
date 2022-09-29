@@ -1,3 +1,4 @@
+from crypt import methods
 from functools import wraps
 from src.constants.http_status_codes import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, \
     HTTP_401_UNAUTHORIZED, HTTP_409_CONFLICT, HTTP_404_NOT_FOUND
@@ -9,6 +10,7 @@ from flask_jwt_extended import jwt_required, create_access_token, create_refresh
 from flasgger import swag_from
 from src.models import Product, User, Role, TokenBlocklist, db
 from datetime import datetime, timezone
+from src.extensions import jwt
 
 
 auth = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
@@ -77,26 +79,37 @@ def refresh_users_token():
     }), HTTP_200_OK
 
 
-@auth.get('/logout')
-@jwt_required()   
+@auth.delete('/logout')
+@jwt_required(verify_type=False)   
 def logout():
-    token = get_jwt()
-    jti = token["jti"]
-    ttype = token["type"]
-    now = datetime.now(timezone.utc)
-    db.session.add(TokenBlocklist(jti=jti, type=ttype, created_at=now))
-    db.session.commit()
-    return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
+    """
+        endpoint where the frontend can send a DELETE for each token
+    """
+    try:
+        token = get_jwt()
+        jti = token["jti"]
+        ttype = token["type"]
+        now = datetime.now()
+        db.session.add(TokenBlocklist(jti=jti, type=ttype, created_at=now))
+        db.session.commit()
+        return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
+    except Exception:
+        return {'error': "there was a problem revoking this token"}
+
 
 
 
 # Callback function to check if a JWT exists in the database blocklist
-# @jwt.token_in_blocklist_loader
-# def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
-#     jti = jwt_payload["jti"]
-#     token = db.session.query(TokenBlocklist.id).filter_by(jti=jti).scalar()
-
-#     return token is not None
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
+    """
+        This function is called whenever a valid JWT is used to access a protected route. 
+        The callback will receive the JWT header and JWT payload as arguments, 
+        and must return True if the JWT has been revoked.
+    """
+    jti = jwt_payload["jti"]
+    token = db.session.query(TokenBlocklist.id).filter_by(jti=jti).scalar()
+    return token is not None
 
 @auth.get("/me")
 @jwt_required()
@@ -113,7 +126,7 @@ def register():
     username = request.json['username']
     email = request.json['email']
     password = request.json['password']
-    roles = request.json['roles']
+    roles = request.json.get('roles', ['buyer'])
     deposit = request.json.get('deposit', 0)
 
     if len(password) < 6:
@@ -133,9 +146,6 @@ def register():
 
     if User.query.filter_by(username=username).first() is not None:
         return jsonify({'error': "username is taken"}), HTTP_409_CONFLICT
-
-    if len(roles) == 0:
-        return jsonify({'error': "User must have atleast one role"}), HTTP_400_BAD_REQUEST
     
     pwd_hash = generate_password_hash(password)
     user = User(username=username, password=pwd_hash, email=email)
@@ -165,9 +175,6 @@ def deposit_coins():
     user_id = get_jwt_identity()
     user = User.query.filter_by(id=user_id).first()
     
-    # if "buyer" not in [role.name for role in user.roles]:
-    #     return jsonify({'error': "Only Users with buyer role can deposit fund"}), HTTP_400_BAD_REQUEST
-    
     deposit = request.json.get("deposit")
     if deposit not in COINS:
         return jsonify({'error': "You can only deposit 5, 10, 20, 50 and 100 cent coin"}), HTTP_400_BAD_REQUEST
@@ -183,9 +190,6 @@ def deposit_coins():
 def buy_product():
     user_id = get_jwt_identity()
     user = User.query.filter_by(id=user_id).first()
-
-    # if "buyer" not in [role.name for role in user.roles]:
-    #     return jsonify({'error': "Only Users with buyer role can buy product"}), HTTP_400_BAD_REQUEST
     
     productId = request.json.get("productId")
     amount_of_products = request.json.get("amount_of_products")
@@ -292,20 +296,30 @@ def update_user(id):
     db.session.commit()
     return jsonify(user.to_json())
 
-@auth.post('/roles')
+@auth.post('user/roles')
 @jwt_required()
-def add_roles():
-    role_name = request.json.get('name')
-    if role_name != "buyer" and role_name != "seller":
-        return jsonify({'error': "Role must be a seller or buyer"}), HTTP_400_BAD_REQUEST
-    
-    role = Role(name=role_name)
-    db.session.add(role)
+def assign_roles():
+    roles = request.json.get('roles')
+    user_id = request.json.get('user_id')
+
+    for role_name in roles:
+        if role_name != "buyer" and role_name != "seller":
+            return jsonify({'error': "Role must be a seller or buyer"}), HTTP_400_BAD_REQUEST
+
+    user = User.query.get(user_id)
+    keep_roles_name = []
+    for role_name in roles:
+        db_role = Role.query.filter_by(name=role_name).first()
+        if db_role:
+            user.roles.append(db_role)
+            keep_roles_name.append(role_name)
+        else:
+            user.roles.append(Role(name=role_name))
     db.session.commit()
     return jsonify({
-        'message': "Role created",
-        'role': {
-            'name': role.name,
+        'message': "Role assigned",
+        'roles': {
+            'name': keep_roles_name,
         }
 
     }), HTTP_201_CREATED
