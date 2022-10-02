@@ -80,7 +80,7 @@ def refresh_users_token():
 
 
 @auth.delete('/logout')
-@jwt_required(verify_type=False)   
+@jwt_required(verify_type=False)
 def logout():
     """
         endpoint where the frontend can send a DELETE for each token
@@ -100,16 +100,16 @@ def logout():
 
 
 # Callback function to check if a JWT exists in the database blocklist
-@jwt.token_in_blocklist_loader
-def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
-    """
-        This function is called whenever a valid JWT is used to access a protected route. 
-        The callback will receive the JWT header and JWT payload as arguments, 
-        and must return True if the JWT has been revoked.
-    """
-    jti = jwt_payload["jti"]
-    token = db.session.query(TokenBlocklist.id).filter_by(jti=jti).scalar()
-    return token is not None
+# @jwt.token_in_blocklist_loader
+# def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
+#     """
+#         This function is called whenever a valid JWT is used to access a protected route. 
+#         The callback will receive the JWT header and JWT payload as arguments, 
+#         and must return True if the JWT has been revoked.
+#     """
+#     jti = jwt_payload["jti"]
+#     token = db.session.query(TokenBlocklist.id).filter_by(jti=jti).scalar()
+#     return token is not None
 
 @auth.get("/me")
 @jwt_required()

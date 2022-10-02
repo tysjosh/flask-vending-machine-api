@@ -32,10 +32,16 @@ class UserTestCase(unittest.TestCase):
         assert response.status_code == 201
 
     def test_login(self):
+        data={
+            "username":"testuser",
+            "email":"testuser@gmail.com",
+            "password":"password"
+        }
+        response=self.client.post('/api/v1/auth/user',json=data)
 
         data={
             "email":"testuser@gmail.com",
             "password":"password"
         }
         response=self.client.post('/api/v1/auth/login',json=data)
-        assert response.status_code == 401
+        assert response.status_code == 200

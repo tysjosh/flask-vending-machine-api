@@ -117,7 +117,7 @@ def delete_product(id):
     db.session.delete(product)
     db.session.commit()
 
-    return jsonify({{'result': "Deleted"}}), HTTP_204_NO_CONTENT
+    return jsonify({'result': "Deleted"}), HTTP_204_NO_CONTENT
 
 
 @products.put('/<int:id>')
