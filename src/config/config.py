@@ -9,10 +9,8 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
 
-    # SECRET_KEY = os.environ.get("SECRET_KEY")
-    # JWT_SECRET_KEY= os.environ.get("JWT_SECRET_KEY")
-    SECRET_KEY='my-secret-key'
-    JWT_SECRET_KEY='my-jwt-secret-key'
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    JWT_SECRET_KEY= os.environ.get("JWT_SECRET_KEY")
     JWT_BLACKLIST_ENABLED = True
     JWT_BLACKLIST_TOKEN_CHECKS = ['access', 'refresh']
     SWAGGER={
