@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from src.models import db
+from src.models import db, TokenBlocklist
 from src.auth import auth
 from src.products import products
 from src.config.swagger import template, swagger_config
@@ -19,11 +19,23 @@ def create_app(test_config=None, config=config_dict['dev']):
     db.app = app
     db.init_app(app)
 
-    JWTManager(app)
+    jwt = JWTManager(app)
     app.register_blueprint(auth)
     app.register_blueprint(products)
 
     Swagger(app, config=swagger_config, template=template)
+
+    # Callback function to check if a JWT exists in the database blocklist
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
+        """
+            This function is called whenever a valid JWT is used to access a protected route. 
+            The callback will receive the JWT header and JWT payload as arguments, 
+            and must return True if the JWT has been revoked.
+        """
+        jti = jwt_payload["jti"]
+        token = db.session.query(TokenBlocklist.id).filter_by(jti=jti).scalar()
+        return token is not None
 
     @app.errorhandler(HTTP_404_NOT_FOUND)
     def handle_404(e):
